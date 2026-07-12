@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taiyo's Danville Walk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--border:#2a2d3a;
+  --text:#e8e9f0;--muted:#7a7d8e;
+  --walked:#4ade9a;--accent:#f0a500;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+
+/* Header */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:1000;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:52px;
+  background:var(--bg);border-bottom:1px solid var(--border);
+}
+.logo{display:flex;align-items:center;gap:10px}
+.site-title{font-weight:600;font-size:15px;letter-spacing:.02em}
+.site-sub{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.hprog{display:flex;align-items:center;gap:12px}
+.pct-lbl{font-family:var(--mono);font-size:22px;font-weight:500;color:var(--walked);line-height:1}
+.pct-sub{font-size:10px;color:var(--muted);text-align:right;line-height:1.6}
+.bar-wrap{width:140px;height:4px;background:var(--border);border-radius:2px}
+.bar-fill{height:100%;background:var(--walked);border-radius:2px;transition:width 1.2s ease;width:0%}
+
+/* Layout */
+.layout{display:flex;height:calc(100vh - 52px);margin-top:52px}
+.sidebar{
+  width:268px;flex-shrink:0;
+  background:var(--surface);border-right:1px solid var(--border);
+  overflow-y:auto;display:flex;flex-direction:column;
+}
+.sb{padding:16px;border-bottom:1px solid var(--border)}
+.sb-lbl{
+  font-family:var(--mono);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:12px;
+}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sbox{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
+.sval{font-family:var(--mono);font-size:20px;font-weight:500;line-height:1}
+.sval.g{color:var(--walked)}
+.sunit{font-size:10px;color:var(--muted);margin-top:3px}
+.witem{
+  padding:9px 11px;border-radius:6px;cursor:pointer;
+  border:1px solid transparent;margin-bottom:5px;transition:all .15s;
+}
+.witem:hover{background:var(--bg);border-color:var(--border)}
+.witem.active{background:var(--bg);border-color:var(--accent)}
+.wname{font-size:12px;font-weight:600}
+.wmeta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+.tbtn{
+  font-family:var(--mono);font-size:10px;padding:5px 10px;
+  border-radius:4px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.tbtn.on{background:var(--bg);border-color:var(--accent);color:var(--accent)}
+.legend{display:flex;flex-direction:column;gap:8px}
+.litem{display:flex;align-items:center;gap:8px;font-size:12px}
+.lline{width:24px;height:3px;border-radius:2px;flex-shrink:0}
+
+/* Loading overlay */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;
+  font-family:var(--mono);font-size:13px;color:var(--muted);
+}
+.spinner{
+  width:32px;height:32px;border:2px solid var(--border);
+  border-top-color:var(--walked);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Error box */
+#errBox{
+  display:none;background:#2a1a1a;border:1px solid #5a2020;
+  border-radius:8px;padding:16px 20px;max-width:480px;
+  font-family:var(--mono);font-size:12px;color:#ff8080;line-height:1.6;
+}
+
+/* Map */
+#map{flex:1}
+.leaflet-container{background:#0f1117}
+.leaflet-tile{filter:brightness(.65) saturate(.35)}
+.leaflet-popup-content-wrapper{
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;
+  font-family:var(--sans);font-size:13px;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+}
+.leaflet-popup-tip{background:var(--surface)}
+.pu-name{font-weight:600;margin-bottom:4px}
+.pu-meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.pu-yes{color:var(--walked);font-weight:600}
+@media(max-width:640px){.sidebar{display:none}}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div id="loaderMsg">Loading walk data...</div>
+  <div id="errBox"></div>
+</div>
+
+<header>
+  <div class="logo">
+    <span style="font-size:20px">&#x1F43E;</span>
+    <div>
+      <div class="site-title">Taiyo's Danville</div>
+      <div class="site-sub">Every road. One walk at a time.</div>
+    </div>
+  </div>
+  <div class="hprog">
+    <div>
+      <div class="pct-lbl" id="pctLbl">—</div>
+      <div class="pct-sub" id="pctSub">&nbsp;</div>
+    </div>
+    <div class="bar-wrap"><div class="bar-fill" id="barFill"></div></div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sb">
+      <div class="sb-lbl">Progress</div>
+      <div class="sgrid">
+        <div class="sbox"><div class="sval g" id="sW">—</div><div class="sunit">miles walked</div></div>
+        <div class="sbox"><div class="sval" id="sT">—</div><div class="sunit">total miles</div></div>
+        <div class="sbox"><div class="sval g" id="sP">—</div><div class="sunit">% complete</div></div>
+        <div class="sbox"><div class="sval" id="sR">—</div><div class="sunit">miles to go</div></div>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="sb-lbl">Walks (<span id="wCount">0</span>)</div>
+      <div id="wList"></div>
+    </div>
+    <div class="sb">
+      <div class="sb-lbl">Layers</div>
+      <div class="toggles">
+        <button class="tbtn on" id="btnWalked"   onclick="tog('walked')">&#10003; Walked</button>
+        <button class="tbtn on" id="btnUnwalked" onclick="tog('unwalked')">&#9675; Unwalked</button>
+        <button class="tbtn on" id="btnTracks"   onclick="tog('tracks')">&#9641; Tracks</button>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="sb-lbl">Legend</div>
+      <div class="legend">
+        <div class="litem"><div class="lline" style="background:#4ade9a"></div>Walked</div>
+        <div class="litem"><div class="lline" style="background:#3a3d4a"></div>Not yet walked</div>
+        <div class="litem"><div class="lline" style="background:#f0a500"></div>GPS track</div>
+      </div>
+    </div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+var map, walkedG, unwalkedG, trackG;
+var layerState = {walked:true, unwalked:true, tracks:true};
+
+function tog(name) {
+  layerState[name] = !layerState[name];
+  var id = 'btn' + name.charAt(0).toUpperCase() + name.slice(1);
+  document.getElementById(id).classList.toggle('on', layerState[name]);
+  var grp = name==='walked' ? walkedG : name==='unwalked' ? unwalkedG : trackG;
+  layerState[name] ? map.addLayer(grp) : map.removeLayer(grp);
+}
+
+function showError(msg) {
+  document.getElementById('loaderMsg').style.display = 'none';
+  var box = document.getElementById('errBox');
+  box.style.display = 'block';
+  box.innerHTML = msg;
+}
+
+function initMap() {
+  map = L.map('map', {center:[37.8195,-121.978], zoom:14});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+  }).addTo(map);
+  walkedG   = L.layerGroup().addTo(map);
+  unwalkedG = L.layerGroup().addTo(map);
+  trackG    = L.layerGroup().addTo(map);
+}
+
+function renderData(data) {
+  var S = data.stats;
+
+  // Stats
+  document.getElementById('pctLbl').textContent = S.pct + '%';
+  document.getElementById('pctSub').textContent = S.walked_miles.toFixed(1) + ' of ' + S.total_miles + ' mi';
+  document.getElementById('sW').textContent = S.walked_miles.toFixed(1);
+  document.getElementById('sT').textContent = S.total_miles;
+  document.getElementById('sP').textContent = S.pct;
+  document.getElementById('sR').textContent = S.miles_left.toFixed(1);
+  document.getElementById('wCount').textContent = S.walk_count;
+  setTimeout(function(){ document.getElementById('barFill').style.width = S.pct + '%'; }, 300);
+
+  // Road segments — walked (green)
+  data.walked_features.forEach(function(ft) {
+    var p = ft.properties;
+    var ll = ft.geometry.coordinates.map(function(c){return [c[1],c[0]];});
+    var line = L.polyline(ll, {color:'#4ade9a', weight:3.5, opacity:0.9});
+    line.bindPopup('<div class="pu-name">'+(p.n||'Unnamed')+'</div><div class="pu-meta">'+p.h+' &middot; '+p.mi+' mi<br><span class="pu-yes">&#10003; Walked</span></div>');
+    walkedG.addLayer(line);
+  });
+
+  // Road segments — unwalked (dark)
+  data.unwalked_features.forEach(function(ft) {
+    var p = ft.properties;
+    var ll = ft.geometry.coordinates.map(function(c){return [c[1],c[0]];});
+    var line = L.polyline(ll, {color:'#3a3d4a', weight:2, opacity:0.55});
+    line.bindPopup('<div class="pu-name">'+(p.n||'Unnamed')+'</div><div class="pu-meta">'+p.h+' &middot; '+p.mi+' mi<br>Not yet walked</div>');
+    unwalkedG.addLayer(line);
+  });
+
+  // GPS tracks + walk list
+  var wList = document.getElementById('wList');
+  data.walks.forEach(function(walk) {
+    var ll = walk.coords.map(function(c){return [c[1],c[0]];});
+    var track = L.polyline(ll, {color:'#f0a500', weight:2.5, opacity:0.85});
+    track.bindPopup('<div class="pu-name">'+walk.name+'</div><div class="pu-meta">'+walk.date+' &middot; '+walk.miles+' mi</div>');
+    trackG.addLayer(track);
+
+    var item = document.createElement('div');
+    item.className = 'witem';
+    item.innerHTML = '<div class="wname">'+walk.name+'</div><div class="wmeta">'+walk.date+' &middot; '+walk.miles+' mi</div>';
+    item.addEventListener('click', function(){
+      document.querySelectorAll('.witem').forEach(function(el){el.classList.remove('active');});
+      item.classList.add('active');
+      map.fitBounds(track.getBounds(), {padding:[40,40]});
+      track.openPopup();
+    });
+    wList.appendChild(item);
+  });
+
+  // Hide loader
+  document.getElementById('loader').style.display = 'none';
+}
+
+// Boot
+initMap();
+
+fetch('progress.json')
+  .then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(data) {
+    renderData(data);
+  })
+  .catch(function(err) {
+    showError(
+      '<strong>Could not load progress.json</strong><br><br>' +
+      'This map needs to be served from a local web server, not opened as a file://<br><br>' +
+      'Quick fix &mdash; open a terminal in this folder and run:<br>' +
+      '<code>python -m http.server 8000</code><br><br>' +
+      'Then open: <a href="http://localhost:8000" style="color:#f0a500">http://localhost:8000</a><br><br>' +
+      'Error: ' + err.message
+    );
+  });
+</script>
+</body>
+</html>

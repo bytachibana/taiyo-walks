@@ -1,0 +1,49 @@
+name: Process Walks
+
+# Runs whenever a new/updated GPX file is pushed into walks/.
+# Regenerates progress.json and commits it back to the repo.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'walks/**'
+
+# Needed so the workflow can commit progress.json back with GITHUB_TOKEN.
+permissions:
+  contents: write
+
+# If several GPX files land close together, let an in-progress run finish
+# and coalesce the rest into one follow-up run rather than piling up.
+concurrency:
+  group: process-walks
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install shapely
+
+      - name: Process walks
+        run: python process_walks.py
+
+      - name: Commit updated progress.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add progress.json
+          if git diff --staged --quiet; then
+            echo "progress.json unchanged — nothing to commit."
+          else
+            git commit -m "Update progress.json [skip ci]"
+            git push
+          fi
