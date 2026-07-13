@@ -117,8 +117,11 @@ function resolveTarget_(cfg, date) {
   var names = listWalkNamesForDate_(cfg, date);
   var bare = date + '.gpx';
   var hasBare = names.indexOf(bare) !== -1;
+  // Anchor the suffix regex to the date prefix — otherwise the day-of-month in
+  // "YYYY-MM-DD.gpx" (e.g. the "-12" in 2026-07-12.gpx) is misread as a suffix.
+  var suffixRe = new RegExp('^' + date + '-(\\d+)\\.gpx$');
   var suffixes = names
-    .map(function (n) { var m = n.match(/-(\d+)\.gpx$/); return m ? parseInt(m[1], 10) : 0; })
+    .map(function (n) { var m = n.match(suffixRe); return m ? parseInt(m[1], 10) : 0; })
     .filter(function (x) { return x > 0; });
 
   if (names.length === 0) return { name: bare, migrate: null };

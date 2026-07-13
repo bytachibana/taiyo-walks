@@ -7,3 +7,11 @@ venv/
 cache/
 .claude/
 _to_Code/
+
+# Apps Script state file — appears in the Drive folder, must not be committed
+processed_files.json
+# Raw Runkeeper exports (un-scrubbed, contain time-of-day) — only the
+# scrubbed date-named copies the Apps Script pushes belong in the repo
+walks/RK_gpx*.gpx
+# Local backup copy of walk data — not part of the repo
+raw_walk_data/

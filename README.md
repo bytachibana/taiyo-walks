@@ -75,7 +75,9 @@ built-in `GITHUB_TOKEN` and needs no secret.
    - `GH_PAT` = the fine-grained PAT from step 4
    - `REPO_OWNER` = `bytachibana`
    - `REPO_NAME` = `taiyo-walks`
-   - `DRIVE_FOLDER_ID` = `1TCjKm48cSIpfjrnJ0ECrtb90rO961jez`
+   - `DRIVE_FOLDER_ID` = *(your Drive folder ID — from the folder's URL,
+     `drive.google.com/drive/folders/{ID}`; keep the folder's sharing set to
+     "Restricted")*
 3. Run `watchDriveFolder()` once from the editor to authorize scopes; check the
    execution log for errors.
 4. Add a trigger: **Triggers → Add Trigger → `watchDriveFolder`, time-driven,
