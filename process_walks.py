@@ -52,9 +52,14 @@ def load_gpx(path):
     # (e.g. "6/22/26 7:48 am" -> "6/22/26") so the public map shows day only.
     label = (name_el.text if name_el is not None else os.path.basename(path)).replace('Walking ', '')
     label = re.sub(r'\s+\d{1,2}:\d{2}\s*[ap]m$', '', label, flags=re.I)
+    # Date comes from the filename (local date, YYYY-MM-DD), NOT the GPX <time>:
+    # that timestamp is UTC and rolls to the next day for evening Pacific walks,
+    # which made the gray subdate disagree with the walk's local-date label.
+    fname_match = re.match(r'(\d{4}-\d{2}-\d{2})', os.path.basename(path))
+    date = fname_match.group(1) if fname_match else (time_el.text[:10] if time_el is not None else '')
     return {
         'name'  : label,
-        'date'  : time_el.text[:10] if time_el is not None else '',
+        'date'  : date,
         'miles' : round(dist, 2),
         'coords': [[round(c[0], 5), round(c[1], 5)] for c in coords],
         '_line' : LineString(coords),
