@@ -12,11 +12,12 @@ on:
 permissions:
   contents: write
 
-# If several GPX files land close together, let an in-progress run finish
-# and coalesce the rest into one follow-up run rather than piling up.
+# A burst of walk pushes (several files dropped at once) would otherwise start
+# several racing runs. Cancel superseded in-progress runs so only the latest —
+# which sees every walk — runs to completion.
 concurrency:
   group: process-walks
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   process:
@@ -40,10 +41,26 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add progress.json
-          if git diff --staged --quiet; then
-            echo "progress.json unchanged — nothing to commit."
-          else
+          # If the Apps Script pushes another walk while this run is committing,
+          # the push is rejected (non-fast-forward). On rejection, drop our
+          # commit, sync to the latest remote (which now has the newer walk),
+          # regenerate progress.json against it, and retry.
+          for attempt in 1 2 3 4 5; do
+            git add progress.json
+            if git diff --staged --quiet; then
+              echo "progress.json unchanged — nothing to commit."
+              exit 0
+            fi
             git commit -m "Update progress.json [skip ci]"
-            git push
-          fi
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected (remote advanced) — syncing and regenerating (attempt $attempt)..."
+            git reset --hard HEAD~1
+            git fetch origin main
+            git reset --hard origin/main
+            python process_walks.py
+          done
+          echo "Still failing to push after 5 attempts."
+          exit 1
