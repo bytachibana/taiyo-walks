@@ -1,0 +1,22 @@
+{
+ "photos": [
+  {
+   "file": "photos/1784213921757.jpg",
+   "thumb": "photos/thumbs/1784213921757.jpg",
+   "date": "2026-07-16",
+   "caption": "2026-07-16"
+  },
+  {
+   "file": "photos/1784213895272.jpg",
+   "thumb": "photos/thumbs/1784213895272.jpg",
+   "date": "2026-07-16",
+   "caption": "2026-07-16"
+  },
+  {
+   "file": "photos/20260622_081359.jpg",
+   "thumb": "photos/thumbs/20260622_081359.jpg",
+   "date": "2026-06-22",
+   "caption": "2026-06-22"
+  }
+ ]
+}
