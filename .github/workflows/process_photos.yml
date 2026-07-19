@@ -1,12 +1,12 @@
 name: Process Photos
 
-# Runs when new images are pushed into photos_incoming/ (by the Apps Script).
+# Runs when new images are pushed into photos_in_process/ (by the Apps Script).
 # Produces web-ready photos/, thumbnails, and photos.json, then removes the raws.
 on:
   push:
     branches: [main]
     paths:
-      - 'photos_incoming/**'
+      - 'photos_in_process/**'
 
 permissions:
   contents: write
@@ -41,7 +41,7 @@ jobs:
           # Retry with resync+regenerate if the remote advances mid-run (same
           # race protection as the walks workflow).
           for attempt in 1 2 3 4 5; do
-            git add photos photos_incoming
+            git add photos photos_in_process
             [ -f photos.json ] && git add photos.json   # only exists after 1st photo
             if git diff --staged --quiet; then
               echo "Nothing to commit."

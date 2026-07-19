@@ -2,13 +2,13 @@
 """
 process_photos.py  —  Taiyo's photo gallery
 ===========================================
-Processes new images dropped in photos_incoming/ into web-ready photos:
+Processes new images dropped in photos_in_process/ into web-ready photos:
   - auto-orients (honours EXIF orientation)
   - reads GPS lat/lon + capture date from EXIF (for the map pin + caption)
   - resizes to a display image + a small thumbnail
   - STRIPS EXIF from the saved images (the coordinate lives only in photos.json)
   - updates photos.json (incremental — existing entries are preserved)
-  - deletes each processed raw from photos_incoming/
+  - deletes each processed raw from photos_in_process/
 
 Dependencies: Pillow, pillow-heif (for iPhone HEIC).
 """
@@ -21,7 +21,7 @@ try:
 except Exception:
     pass
 
-INCOMING     = 'photos_incoming'
+INCOMING     = 'photos_in_process'
 OUT_DIR      = 'photos'
 THUMB_DIR    = 'photos/thumbs'
 MANIFEST     = 'photos.json'

@@ -236,7 +236,7 @@ function saveProcessed_(folder, processed) {
 
 /* ─────────────────────────── Photo gallery watcher ─────────────────────────
  * A SECOND time-driven trigger (every 15 min) calls watchPhotos(). It pushes
- * new images from the photo drop folder to photos_incoming/ on GitHub; the
+ * new images from the photo drop folder to photos_in_process/ on GitHub; the
  * "Process Photos" Action then strips EXIF from the published copies, builds
  * thumbnails, and writes photos.json.
  *
@@ -285,9 +285,9 @@ function watchPhotos() {
   Logger.log('Photos done. Pushed ' + pushed + ' new image(s).');
 }
 
-/** PUT a raw image into photos_incoming/ (no scrub — the Action strips EXIF). */
+/** PUT a raw image into photos_in_process/ (no scrub — the Action strips EXIF). */
 function pushPhoto_(cfg, filename, blob) {
-  var url = ghUrl_(cfg, 'photos_incoming/' + encodeURIComponent(filename));
+  var url = ghUrl_(cfg, 'photos_in_process/' + encodeURIComponent(filename));
 
   var sha = null;   // needed to overwrite if it already exists
   var probe = UrlFetchApp.fetch(url + '?ref=main', {

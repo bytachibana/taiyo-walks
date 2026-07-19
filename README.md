@@ -113,7 +113,7 @@ scrolling filmstrip along the bottom, plus a pin on the map where each photo
 was taken. Same drop-folder pattern as the walks.
 
 **Flow:** `photo_inbox` (Drive) → Apps Script `watchPhotos()` → GitHub
-`photos_incoming/` → **Process Photos** Action (`process_photos.py`, Pillow):
+`photos_in_process/` → **Process Photos** Action (`process_photos.py`, Pillow):
 auto-orient, read GPS + date from EXIF, resize + thumbnail, **strip EXIF from
 the published images**, update `photos.json`, delete the raw → the map reads
 `photos.json`.
