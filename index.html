@@ -105,7 +105,34 @@ header{
 .pu-name{font-weight:600;margin-bottom:4px}
 .pu-meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .pu-yes{color:var(--walked);font-weight:600}
-@media(max-width:640px){.sidebar{display:none}}
+
+/* Photo gallery — bottom filmstrip, map pins, lightbox */
+.mainarea{flex:1;display:flex;flex-direction:column;min-width:0}
+.filmstrip{
+  height:118px;flex-shrink:0;display:flex;gap:8px;align-items:center;
+  padding:0 12px;overflow-x:auto;overflow-y:hidden;
+  background:var(--surface);border-top:1px solid var(--border);
+}
+.filmstrip:empty{display:none}
+.pthumb{
+  height:92px;width:auto;flex-shrink:0;border-radius:6px;cursor:pointer;
+  object-fit:cover;border:2px solid transparent;
+  transition:border-color .15s,transform .15s;
+}
+.pthumb:hover{border-color:var(--accent);transform:translateY(-2px)}
+.photopin img{
+  width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:pointer;
+  border:2px solid var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.55);
+}
+#lightbox{
+  display:none;position:fixed;inset:0;z-index:2000;cursor:zoom-out;
+  background:rgba(8,9,13,.93);flex-direction:column;gap:14px;
+  align-items:center;justify-content:center;padding:24px;
+}
+#lbImg{max-width:92vw;max-height:82vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+#lbCap{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+@media(max-width:640px){.sidebar{display:none}.filmstrip{height:96px}.pthumb{height:74px}}
 </style>
 </head>
 <body>
@@ -154,6 +181,7 @@ header{
         <button class="tbtn on" id="btnWalked"   onclick="tog('walked')">&#10003; Walked</button>
         <button class="tbtn on" id="btnUnwalked" onclick="tog('unwalked')">&#9675; Unwalked</button>
         <button class="tbtn on" id="btnTracks"   onclick="tog('tracks')">&#9641; Tracks</button>
+        <button class="tbtn on" id="btnPhotos"   onclick="tog('photos')">&#128247; Photos</button>
       </div>
     </div>
     <div class="sb">
@@ -165,19 +193,27 @@ header{
       </div>
     </div>
   </aside>
-  <div id="map"></div>
+  <div class="mainarea">
+    <div id="map"></div>
+    <div class="filmstrip" id="filmstrip"></div>
+  </div>
+</div>
+
+<div id="lightbox" onclick="this.style.display='none'">
+  <img id="lbImg" src="" alt="">
+  <div id="lbCap"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-var map, walkedG, unwalkedG, trackG;
-var layerState = {walked:true, unwalked:true, tracks:true};
+var map, walkedG, unwalkedG, trackG, photoG;
+var layerState = {walked:true, unwalked:true, tracks:true, photos:true};
 
 function tog(name) {
   layerState[name] = !layerState[name];
   var id = 'btn' + name.charAt(0).toUpperCase() + name.slice(1);
   document.getElementById(id).classList.toggle('on', layerState[name]);
-  var grp = name==='walked' ? walkedG : name==='unwalked' ? unwalkedG : trackG;
+  var grp = name==='walked' ? walkedG : name==='unwalked' ? unwalkedG : name==='tracks' ? trackG : photoG;
   layerState[name] ? map.addLayer(grp) : map.removeLayer(grp);
 }
 
@@ -196,6 +232,42 @@ function initMap() {
   walkedG   = L.layerGroup().addTo(map);
   unwalkedG = L.layerGroup().addTo(map);
   trackG    = L.layerGroup().addTo(map);
+  photoG    = L.layerGroup().addTo(map);
+}
+
+function openLightbox(p) {
+  document.getElementById('lbImg').src = p.file;
+  document.getElementById('lbCap').textContent = p.caption || p.date || '';
+  document.getElementById('lightbox').style.display = 'flex';
+}
+
+function renderPhotos(photos) {
+  if (!photos || !photos.length) return;
+  var strip = document.getElementById('filmstrip');
+  photos.forEach(function(p) {
+    var t = document.createElement('img');
+    t.className = 'pthumb';
+    t.src = p.thumb;
+    t.loading = 'lazy';
+    t.alt = p.caption || '';
+    t.title = p.caption || p.date || '';
+    t.addEventListener('click', function() {
+      if (p.lat != null && p.lon != null) map.setView([p.lat, p.lon], 16);
+      openLightbox(p);
+    });
+    strip.appendChild(t);
+
+    if (p.lat != null && p.lon != null) {
+      var icon = L.divIcon({
+        className: 'photopin',
+        html: '<img src="' + p.thumb + '" alt="">',
+        iconSize: [40, 40], iconAnchor: [20, 20]
+      });
+      var mk = L.marker([p.lat, p.lon], {icon: icon});
+      mk.on('click', function() { openLightbox(p); });
+      photoG.addLayer(mk);
+    }
+  });
 }
 
 function renderData(data) {
@@ -276,6 +348,12 @@ fetch('progress.json?t=' + Date.now())
       'Error: ' + err.message
     );
   });
+
+// Photos are optional — a missing photos.json just means no gallery yet.
+fetch('photos.json?t=' + Date.now())
+  .then(function(r) { return r.ok ? r.json() : {photos: []}; })
+  .then(function(d) { renderPhotos(d.photos || []); })
+  .catch(function() { /* no photos yet — filmstrip stays hidden */ });
 </script>
 </body>
 </html>

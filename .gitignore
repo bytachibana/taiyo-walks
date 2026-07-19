@@ -15,5 +15,6 @@ processed_files.json
 walks/RK_gpx*.gpx
 # Local backup copy of walk data — not part of the repo
 raw_walk_data/
-# Apps Script drop folder (raw exports + state file) — never commit this
+# Apps Script drop folders (raw exports + state files) — never commit these
 walk_data_inbox/
+photo_inbox/

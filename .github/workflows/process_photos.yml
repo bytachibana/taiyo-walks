@@ -1,0 +1,61 @@
+name: Process Photos
+
+# Runs when new images are pushed into photos_incoming/ (by the Apps Script).
+# Produces web-ready photos/, thumbnails, and photos.json, then removes the raws.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'photos_incoming/**'
+
+permissions:
+  contents: write
+
+# Collapse a burst of photo pushes into the latest run.
+concurrency:
+  group: process-photos
+  cancel-in-progress: true
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install Pillow pillow-heif
+
+      - name: Process photos
+        run: python process_photos.py
+
+      - name: Commit gallery updates
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Retry with resync+regenerate if the remote advances mid-run (same
+          # race protection as the walks workflow).
+          for attempt in 1 2 3 4 5; do
+            git add photos photos.json photos_incoming
+            if git diff --staged --quiet; then
+              echo "Nothing to commit."
+              exit 0
+            fi
+            git commit -m "Update photo gallery [skip ci]"
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected (remote advanced) — syncing and regenerating (attempt $attempt)..."
+            git reset --hard HEAD~1
+            git fetch origin main
+            git reset --hard origin/main
+            python process_photos.py
+          done
+          echo "Still failing to push after 5 attempts."
+          exit 1

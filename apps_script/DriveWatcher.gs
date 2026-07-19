@@ -232,3 +232,105 @@ function saveProcessed_(folder, processed) {
     folder.createFile(PROCESSED_INDEX, json, MimeType.PLAIN_TEXT);
   }
 }
+
+
+/* ─────────────────────────── Photo gallery watcher ─────────────────────────
+ * A SECOND time-driven trigger (every 15 min) calls watchPhotos(). It pushes
+ * new images from the photo drop folder to photos_incoming/ on GitHub; the
+ * "Process Photos" Action then strips EXIF from the published copies, builds
+ * thumbnails, and writes photos.json.
+ *
+ * Needs one extra script property:  PHOTO_FOLDER_ID  (the photo drop folder).
+ * Reuses GH_PAT / REPO_OWNER / REPO_NAME.
+ */
+var PHOTO_INDEX = 'processed_photos.json';
+var IMAGE_RE    = /\.(jpe?g|png|heic|heif|webp)$/i;
+
+function photoCfg_() {
+  var p = PropertiesService.getScriptProperties();
+  var cfg = {
+    token:    p.getProperty('GH_PAT'),
+    owner:    p.getProperty('REPO_OWNER'),
+    repo:     p.getProperty('REPO_NAME'),
+    folderId: p.getProperty('PHOTO_FOLDER_ID'),
+  };
+  var missing = Object.keys(cfg).filter(function (k) { return !cfg[k]; });
+  if (missing.length) throw new Error('Missing script properties: ' + missing.join(', '));
+  return cfg;
+}
+
+/** Entry point — set a second 15-minute time trigger to call this. */
+function watchPhotos() {
+  var cfg = photoCfg_();
+  var folder = DriveApp.getFolderById(cfg.folderId);
+  var processed = loadIndex_(folder, PHOTO_INDEX);
+  var pushed = 0;
+
+  var files = folder.getFiles();
+  while (files.hasNext()) {
+    var file = files.next();
+    var name = file.getName();
+    if (!IMAGE_RE.test(name)) continue;   // images only
+    if (processed[name]) continue;        // already pushed
+    try {
+      pushPhoto_(cfg, name, file.getBlob());
+      processed[name] = true;
+      pushed++;
+      Logger.log('Pushed photo: ' + name);
+    } catch (err) {
+      Logger.log('FAILED ' + name + ': ' + err.message);
+    }
+  }
+  if (pushed > 0) saveIndex_(folder, PHOTO_INDEX, processed);
+  Logger.log('Photos done. Pushed ' + pushed + ' new image(s).');
+}
+
+/** PUT a raw image into photos_incoming/ (no scrub — the Action strips EXIF). */
+function pushPhoto_(cfg, filename, blob) {
+  var url = ghUrl_(cfg, 'photos_incoming/' + encodeURIComponent(filename));
+
+  var sha = null;   // needed to overwrite if it already exists
+  var probe = UrlFetchApp.fetch(url + '?ref=main', {
+    method: 'get', headers: ghHeaders_(cfg), muteHttpExceptions: true,
+  });
+  if (probe.getResponseCode() === 200) sha = JSON.parse(probe.getContentText()).sha;
+
+  var payload = {
+    message: 'Add photo: ' + filename,
+    content: Utilities.base64Encode(blob.getBytes()),   // binary-safe
+    branch: 'main',
+  };
+  if (sha) payload.sha = sha;
+
+  var resp = UrlFetchApp.fetch(url, {
+    method: 'put', headers: ghHeaders_(cfg), contentType: 'application/json',
+    payload: JSON.stringify(payload), muteHttpExceptions: true,
+  });
+  var code = resp.getResponseCode();
+  if (code !== 200 && code !== 201) {
+    throw new Error('GitHub API ' + code + ': ' + resp.getContentText());
+  }
+}
+
+/** Load a {"processed":[...]} index file from a folder as a set. */
+function loadIndex_(folder, indexName) {
+  var it = folder.getFilesByName(indexName);
+  if (!it.hasNext()) return {};
+  try {
+    var data = JSON.parse(it.next().getBlob().getDataAsString());
+    var set = {};
+    (data.processed || []).forEach(function (n) { set[n] = true; });
+    return set;
+  } catch (err) {
+    Logger.log('Could not parse ' + indexName + ', starting fresh: ' + err.message);
+    return {};
+  }
+}
+
+/** Write a {"processed":[...]} index file back to a folder. */
+function saveIndex_(folder, indexName, set) {
+  var json = JSON.stringify({ processed: Object.keys(set).sort() }, null, 2);
+  var it = folder.getFilesByName(indexName);
+  if (it.hasNext()) it.next().setContent(json);
+  else folder.createFile(indexName, json, MimeType.PLAIN_TEXT);
+}

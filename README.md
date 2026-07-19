@@ -106,6 +106,31 @@ Then open `index.html` in a browser.
 3. After ~90 s, confirm a new commit updated `progress.json`.
 4. Check taiyo.spring-rock.com.
 
+## Photo gallery
+
+Drop photos of Taiyo into a Drive folder and they appear on the site — a
+scrolling filmstrip along the bottom, plus a pin on the map where each photo
+was taken. Same drop-folder pattern as the walks.
+
+**Flow:** `photo_inbox` (Drive) → Apps Script `watchPhotos()` → GitHub
+`photos_incoming/` → **Process Photos** Action (`process_photos.py`, Pillow):
+auto-orient, read GPS + date from EXIF, resize + thumbnail, **strip EXIF from
+the published images**, update `photos.json`, delete the raw → the map reads
+`photos.json`.
+
+- The published image files carry **no EXIF** — the GPS coordinate lives only
+  in `photos.json` to place the map pin. (You chose to keep photo locations
+  public as pins; a photo taken at home would pin your home.)
+- iPhone `.heic` is supported (the Action installs `pillow-heif`).
+
+**One-time setup:**
+1. Create a **new** Drive folder for photos (e.g. `photo_inbox`) — **separate
+   from the repo**, like `walk_data_inbox`. Copy its folder ID.
+2. In Apps Script → Script Properties, add `PHOTO_FOLDER_ID` = that ID.
+3. Add a second trigger: `watchPhotos`, time-driven, every 15 minutes.
+
+Then just drop photos into that folder — nothing else.
+
 ## Privacy: no time-of-day is published
 
 Runkeeper GPX files embed the exact time of every track point and the walk
