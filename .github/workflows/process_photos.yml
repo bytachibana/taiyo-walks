@@ -41,7 +41,8 @@ jobs:
           # Retry with resync+regenerate if the remote advances mid-run (same
           # race protection as the walks workflow).
           for attempt in 1 2 3 4 5; do
-            git add photos photos.json photos_incoming
+            git add photos photos_incoming
+            [ -f photos.json ] && git add photos.json   # only exists after 1st photo
             if git diff --staged --quiet; then
               echo "Nothing to commit."
               exit 0
