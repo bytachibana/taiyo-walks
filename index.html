@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <title>Taiyo's Danville Walk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,14 @@
   --walked:#4ade9a;--accent:#f0a500;
   --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
 }
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans)}
+html,body{
+  height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);
+  overflow:hidden;                      /* app-style: only inner panes scroll */
+  overscroll-behavior:none;             /* no rubber-band / pull-to-refresh */
+  -webkit-text-size-adjust:100%;        /* iOS: don't inflate text on rotate */
+  -webkit-tap-highlight-color:transparent;
+}
+button{touch-action:manipulation}       /* kill the 300ms tap delay */
 
 /* Header */
 header{
@@ -36,6 +43,9 @@ header{
 
 /* Layout */
 .layout{display:flex;height:calc(100vh - 52px);margin-top:52px}
+/* Mobile browsers shrink/grow the address bar, so 100vh overflows and the
+   filmstrip gets pushed off-screen. dvh tracks the *visible* viewport. */
+@supports (height:100dvh){.layout{height:calc(100dvh - 52px)}}
 .sidebar{
   width:268px;flex-shrink:0;
   background:var(--surface);border-right:1px solid var(--border);
@@ -112,11 +122,15 @@ header{
   height:118px;flex-shrink:0;display:flex;gap:8px;align-items:center;
   padding:0 12px;overflow-x:auto;overflow-y:hidden;
   background:var(--surface);border-top:1px solid var(--border);
+  -webkit-overflow-scrolling:touch;     /* iOS momentum scrolling */
+  scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;        /* don't trigger back-swipe navigation */
+  padding-bottom:env(safe-area-inset-bottom);   /* clear iPhone home indicator */
 }
 .filmstrip:empty{display:none}
 .pthumb{
   height:92px;width:auto;flex-shrink:0;border-radius:6px;cursor:pointer;
-  object-fit:cover;border:2px solid transparent;
+  object-fit:cover;border:2px solid transparent;scroll-snap-align:center;
   transition:border-color .15s,transform .15s;
 }
 .pthumb:hover{border-color:var(--accent);transform:translateY(-2px)}
@@ -127,12 +141,75 @@ header{
 #lightbox{
   display:none;position:fixed;inset:0;z-index:2000;cursor:zoom-out;
   background:rgba(8,9,13,.93);flex-direction:column;gap:14px;
-  align-items:center;justify-content:center;padding:24px;
+  align-items:center;justify-content:center;
+  padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));
 }
-#lbImg{max-width:92vw;max-height:82vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+#lbImg{max-width:92vw;max-height:78vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
 #lbCap{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.lb-close{
+  position:absolute;top:max(12px,env(safe-area-inset-top));right:14px;
+  width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.14);color:#fff;font-size:26px;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+}
 
-@media(max-width:640px){.sidebar{display:none}.filmstrip{height:96px}.pthumb{height:74px}}
+/* Menu button + scrim: desktop hides them, mobile uses them for the drawer */
+.menu-btn{display:none}
+.scrim{display:none}
+
+/* ───────────── Mobile (Android + iOS) ───────────── */
+@media(max-width:640px){
+  /* Compact header so the title + progress fit narrow screens */
+  header{padding:0 12px}
+  .site-sub{display:none}
+  .site-title{font-size:14px}
+  .pct-lbl{font-size:18px}
+  .pct-sub{font-size:9px}
+  .bar-wrap{width:70px}
+  .logo{gap:8px}
+
+  .menu-btn{
+    display:flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex-shrink:0;
+    background:transparent;border:1px solid var(--border);border-radius:8px;
+    color:var(--text);font-size:16px;cursor:pointer;
+  }
+
+  /* Sidebar becomes a slide-in drawer instead of vanishing —
+     stats, walks, layers and legend stay reachable on a phone. */
+  .sidebar{
+    position:fixed;top:52px;left:0;bottom:0;
+    width:min(86vw,320px);z-index:1200;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:2px 0 24px rgba(0,0,0,.55);
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .sidebar.open{transform:translateX(0)}
+  .scrim{
+    position:fixed;inset:52px 0 0 0;z-index:1150;
+    background:rgba(0,0,0,.5);
+  }
+  .scrim.show{display:block}
+
+  /* Touch targets: Apple/Android guidance is ~44px minimum */
+  .tbtn{font-size:12px;padding:10px 14px}
+  .witem{padding:12px 12px;margin-bottom:6px}
+  .wname{font-size:13px}
+  .wmeta{font-size:11px}
+  .sval{font-size:18px}
+
+  /* Filmstrip: a bit shorter so the map keeps room on small screens */
+  .filmstrip{height:calc(96px + env(safe-area-inset-bottom))}
+  .pthumb{height:76px}
+}
+
+/* Short landscape phones: shrink the strip further so the map isn't crushed */
+@media(max-height:480px) and (max-width:900px){
+  .filmstrip{height:calc(72px + env(safe-area-inset-bottom))}
+  .pthumb{height:56px}
+}
 </style>
 </head>
 <body>
@@ -145,6 +222,7 @@ header{
 
 <header>
   <div class="logo">
+    <button class="menu-btn" id="menuBtn" onclick="toggleDrawer()" aria-label="Show stats and walks">&#9776;</button>
     <span style="font-size:20px">&#x1F43E;</span>
     <div>
       <div class="site-title">Taiyo's Danville</div>
@@ -199,7 +277,10 @@ header{
   </div>
 </div>
 
+<div class="scrim" id="scrim" onclick="toggleDrawer(false)"></div>
+
 <div id="lightbox" onclick="this.style.display='none'">
+  <button class="lb-close" aria-label="Close photo">&times;</button>
   <img id="lbImg" src="" alt="">
   <div id="lbCap"></div>
 </div>
@@ -215,6 +296,17 @@ function tog(name) {
   document.getElementById(id).classList.toggle('on', layerState[name]);
   var grp = name==='walked' ? walkedG : name==='unwalked' ? unwalkedG : name==='tracks' ? trackG : photoG;
   layerState[name] ? map.addLayer(grp) : map.removeLayer(grp);
+}
+
+function isMobile() { return window.innerWidth <= 640; }
+
+// Mobile: the sidebar is a slide-in drawer. Pass true/false to force a state.
+function toggleDrawer(force) {
+  var sb = document.querySelector('.sidebar');
+  var sc = document.getElementById('scrim');
+  var open = (typeof force === 'boolean') ? force : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  sc.classList.toggle('show', open);
 }
 
 function showError(msg) {
@@ -315,6 +407,7 @@ function renderData(data) {
     item.addEventListener('click', function(){
       document.querySelectorAll('.witem').forEach(function(el){el.classList.remove('active');});
       item.classList.add('active');
+      if (isMobile()) toggleDrawer(false);   // close drawer so the map is visible
       map.fitBounds(track.getBounds(), {padding:[40,40]});
       track.openPopup();
     });
@@ -327,6 +420,13 @@ function renderData(data) {
 
 // Boot
 initMap();
+
+// Mobile: rotating the device or the address bar hiding changes the viewport —
+// Leaflet must recompute its size or the map shows grey gaps.
+window.addEventListener('resize', function() { if (map) map.invalidateSize(); });
+window.addEventListener('orientationchange', function() {
+  setTimeout(function() { if (map) map.invalidateSize(); }, 250);
+});
 
 // Cache-buster: GitHub Pages caches progress.json for up to 10 min, so append
 // a unique timestamp to always fetch the freshest data after a new walk.
