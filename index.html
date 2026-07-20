@@ -170,7 +170,7 @@ header{
 
   .menu-btn{
     display:flex;align-items:center;justify-content:center;
-    width:40px;height:40px;flex-shrink:0;
+    width:44px;height:44px;flex-shrink:0;      /* 44px = Apple/Android min target */
     background:transparent;border:1px solid var(--border);border-radius:8px;
     color:var(--text);font-size:16px;cursor:pointer;
   }
@@ -194,8 +194,8 @@ header{
   .scrim.show{display:block}
 
   /* Touch targets: Apple/Android guidance is ~44px minimum */
-  .tbtn{font-size:12px;padding:10px 14px}
-  .witem{padding:12px 12px;margin-bottom:6px}
+  .tbtn{font-size:12px;padding:10px 14px;min-height:44px}
+  .witem{padding:12px 12px;margin-bottom:6px;min-height:44px}
   .wname{font-size:13px}
   .wmeta{font-size:11px}
   .sval{font-size:18px}
