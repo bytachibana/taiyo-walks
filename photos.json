@@ -1,6 +1,30 @@
 {
  "photos": [
   {
+   "file": "photos/20260720_190217c.jpg",
+   "thumb": "photos/thumbs/20260720_190217c.jpg",
+   "date": "2026-07-20",
+   "caption": "2026-07-20",
+   "lat": 37.807122,
+   "lon": -121.942154
+  },
+  {
+   "file": "photos/20260720_184637c.jpg",
+   "thumb": "photos/thumbs/20260720_184637c.jpg",
+   "date": "2026-07-20",
+   "caption": "2026-07-20",
+   "lat": 37.804685,
+   "lon": -121.936802
+  },
+  {
+   "file": "photos/20260720_184545c.jpg",
+   "thumb": "photos/thumbs/20260720_184545c.jpg",
+   "date": "2026-07-20",
+   "caption": "2026-07-20",
+   "lat": 37.804921,
+   "lon": -121.936927
+  },
+  {
    "file": "photos/1784213921757.jpg",
    "thumb": "photos/thumbs/1784213921757.jpg",
    "date": "2026-07-16",
