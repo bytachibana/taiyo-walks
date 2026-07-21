@@ -60,7 +60,14 @@ header{
 .sbox{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px}
 .sval{font-family:var(--mono);font-size:20px;font-weight:500;line-height:1}
 .sval.g{color:var(--walked)}
+.sval.a{color:var(--accent)}          /* gold = actual distance, matches GPS tracks */
 .sunit{font-size:10px;color:var(--muted);margin-top:3px}
+.sbox.wide{grid-column:1/-1}
+.sbox.wide .sval{font-size:24px}
+.snote{
+  font-family:var(--mono);font-size:9px;color:var(--muted);
+  margin-top:10px;line-height:1.6;
+}
 .witem{
   padding:9px 11px;border-radius:6px;cursor:pointer;
   border:1px solid transparent;margin-bottom:5px;transition:all .15s;
@@ -243,11 +250,13 @@ header{
     <div class="sb">
       <div class="sb-lbl">Progress</div>
       <div class="sgrid">
-        <div class="sbox"><div class="sval g" id="sW">—</div><div class="sunit">miles walked</div></div>
-        <div class="sbox"><div class="sval" id="sT">—</div><div class="sunit">total miles</div></div>
+        <div class="sbox wide"><div class="sval a" id="sD">—</div><div class="sunit">miles actually walked</div></div>
+        <div class="sbox"><div class="sval g" id="sW">—</div><div class="sunit">roads covered</div></div>
+        <div class="sbox"><div class="sval" id="sT">—</div><div class="sunit">total roads</div></div>
         <div class="sbox"><div class="sval g" id="sP">—</div><div class="sunit">% complete</div></div>
-        <div class="sbox"><div class="sval" id="sR">—</div><div class="sunit">miles to go</div></div>
+        <div class="sbox"><div class="sval" id="sR">—</div><div class="sunit">roads to go</div></div>
       </div>
+      <div class="snote" id="sNote">&nbsp;</div>
     </div>
     <div class="sb">
       <div class="sb-lbl">Walks (<span id="wCount">0</span>)</div>
@@ -373,6 +382,22 @@ function renderData(data) {
   document.getElementById('sP').textContent = S.pct;
   document.getElementById('sR').textContent = S.miles_left.toFixed(1);
   document.getElementById('wCount').textContent = S.walk_count;
+
+  // Actual distance walked vs unique road coverage. Older progress.json files
+  // won't have these, so fall back to summing the walks client-side.
+  var dist = (S.distance_walked != null)
+    ? S.distance_walked
+    : (data.walks || []).reduce(function(t, w) { return t + (w.miles || 0); }, 0);
+  document.getElementById('sD').textContent = dist.toFixed(1);
+
+  var ratio = S.repeat_ratio != null
+    ? S.repeat_ratio
+    : (S.walked_miles > 0 ? dist / S.walked_miles : 0);
+  if (ratio) {
+    document.getElementById('sNote').textContent =
+      ratio.toFixed(2) + '× walked per mile of new road — repeats, ' +
+      'side paths and out-and-backs all count toward distance.';
+  }
   setTimeout(function(){ document.getElementById('barFill').style.width = S.pct + '%'; }, 300);
 
   // Road segments — walked (green)

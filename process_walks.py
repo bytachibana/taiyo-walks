@@ -158,17 +158,27 @@ def main():
 
     pct = round(100 * walked_mi / total_mi, 1) if total_mi > 0 else 0
 
+    # Two different mileages, and they mean different things:
+    #   walked_mi  — unique ROAD COVERAGE (each street counted once, however
+    #                many times it's been walked). This drives % complete.
+    #   distance_mi — actual GROUND COVERED on walks (sum of every GPS track),
+    #                so repeats, side paths and out-and-backs all count.
+    distance_mi = sum(w['miles'] for w in walks)
+
     # ── Write output ──────────────────────────────────────────────────────────
     output = {
         'walked_features'  : walked_feats,
         'unwalked_features': unwalked_feats,
         'walks'            : walks,
         'stats': {
-            'walked_miles': round(walked_mi, 2),
-            'total_miles' : round(total_mi, 1),
-            'pct'         : pct,
-            'miles_left'  : round(total_mi - walked_mi, 1),
-            'walk_count'  : len(walks),
+            'walked_miles'   : round(walked_mi, 2),
+            'total_miles'    : round(total_mi, 1),
+            'pct'            : pct,
+            'miles_left'     : round(total_mi - walked_mi, 1),
+            'walk_count'     : len(walks),
+            'distance_walked': round(distance_mi, 1),
+            # how far you walk per mile of *new* road covered
+            'repeat_ratio'   : round(distance_mi / walked_mi, 2) if walked_mi > 0 else 0,
         }
     }
 
@@ -178,9 +188,10 @@ def main():
     size_kb = os.path.getsize(OUTPUT_FILE) / 1024
     print(f"\n{'='*48}")
     print(f"  Walks processed : {len(walks)}")
+    print(f"  Distance walked : {distance_mi:.1f} mi   (actual ground covered)")
+    print(f"  Roads covered   : {walked_mi:.2f} mi  ({pct}%)  (unique roads)")
     print(f"  Total road miles: {total_mi:.1f}")
-    print(f"  Miles walked    : {walked_mi:.2f}  ({pct}%)")
-    print(f"  Miles remaining : {total_mi - walked_mi:.1f}")
+    print(f"  Roads remaining : {total_mi - walked_mi:.1f}")
     print(f"  Output          : {OUTPUT_FILE}  ({size_kb:.0f} KB)")
     print(f"{'='*48}")
     print(f"\nDone! Open index.html in Chrome to see updated progress.")

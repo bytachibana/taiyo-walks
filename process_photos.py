@@ -12,7 +12,7 @@ Processes new images dropped in photos_in_process/ into web-ready photos:
 
 Dependencies: Pillow, pillow-heif (for iPhone HEIC).
 """
-import json, os, glob, sys
+import json, math, os, glob, sys
 from PIL import Image, ImageOps, ExifTags
 
 try:
@@ -31,11 +31,35 @@ EXTS         = ('.jpg', '.jpeg', '.png', '.heic', '.heif', '.webp')
 
 
 def gps_to_decimal(coord, ref):
-    d, m, s = (float(coord[0]), float(coord[1]), float(coord[2]))
+    """Degrees/minutes/seconds -> decimal. Returns None if unusable.
+
+    Cameras sometimes write GPS tags with zero/!finite rationals when there was
+    no satellite fix. float() then yields NaN, and NaN is NOT valid JSON — it
+    silently breaks the gallery in the browser. So reject anything non-finite.
+    """
+    try:
+        d, m, s = (float(coord[0]), float(coord[1]), float(coord[2]))
+    except (TypeError, ValueError, ZeroDivisionError, IndexError):
+        return None
+    if not all(math.isfinite(x) for x in (d, m, s)):
+        return None
     val = d + m / 60.0 + s / 3600.0
+    if not math.isfinite(val):
+        return None
     if str(ref).upper() in ('S', 'W'):
         val = -val
     return round(val, 6)
+
+
+def usable_coords(lat, lon):
+    """True only for finite, in-range, non-null-island coordinates."""
+    if lat is None or lon is None:
+        return False
+    if not (math.isfinite(lat) and math.isfinite(lon)):
+        return False
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return False
+    return not (lat == 0 and lon == 0)      # 0,0 = "no fix", not the Atlantic
 
 
 def extract_meta(img):
@@ -92,7 +116,7 @@ def process_one(path):
         'date':  date,
         'caption': date or stem,
     }
-    if lat is not None and lon is not None:
+    if usable_coords(lat, lon):          # never write NaN/garbage into the JSON
         entry['lat'] = lat
         entry['lon'] = lon
     return out_name, entry
@@ -114,6 +138,20 @@ def main():
                       if p.lower().endswith(EXTS))
     if not incoming:
         print('No new photos to process.')
+
+    # Repair coords written by an older version (NaN broke JSON parsing and
+    # silently hid the whole gallery). Done even with no new photos.
+    repaired = 0
+    for p in by_name.values():
+        if ('lat' in p or 'lon' in p) and not usable_coords(p.get('lat'), p.get('lon')):
+            p.pop('lat', None)
+            p.pop('lon', None)
+            repaired += 1
+    if repaired:
+        print(f"  repaired {repaired} entr(ies) with invalid coordinates")
+
+    # Nothing new and nothing to fix — leave the manifest untouched.
+    if not incoming and not repaired:
         return
 
     for path in incoming:
@@ -129,8 +167,18 @@ def main():
     # Newest first (by date, then name).
     photos = sorted(by_name.values(),
                     key=lambda e: (e.get('date', ''), e['file']), reverse=True)
+
+    # Scrub any non-finite coords inherited from an older manifest, so a bad
+    # entry written by a previous version can't keep breaking the gallery.
+    for p in photos:
+        if not usable_coords(p.get('lat'), p.get('lon')):
+            p.pop('lat', None)
+            p.pop('lon', None)
+
     with open(MANIFEST, 'w') as f:
-        json.dump({'photos': photos}, f, indent=1)
+        # allow_nan=False: fail loudly rather than emit invalid JSON that the
+        # browser rejects (which silently hides the whole gallery).
+        json.dump({'photos': photos}, f, indent=1, allow_nan=False)
     print(f"{len(photos)} photo(s) in manifest.")
 
 
