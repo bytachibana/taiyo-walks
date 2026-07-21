@@ -62,6 +62,29 @@ def first(x):
     return '' if x is None else str(x)
 
 
+def classify_highway(hw):
+    """Collapse a possibly list-valued highway tag to ONE type, roads first.
+
+    osmnx merges consecutive segments when it simplifies the graph, so an edge
+    can carry several highway values, e.g. ['path', 'residential'] for a court
+    that joins a footpath. Naively taking element [0] classified such edges as
+    'path', and the paved-surface rule for paths then DROPPED them — which is
+    how Cannes Ct / Murcia Ct went missing.
+
+    Precedence: any road type > cycleway > whatever's left. A merged edge that
+    contains a road segment is a road we must keep.
+    """
+    vals = hw if isinstance(hw, list) else [hw]
+    vals = [str(v) for v in vals if v]
+    for v in vals:
+        if v in ROAD_TYPES:
+            return v
+    for v in vals:
+        if v == 'cycleway':
+            return v
+    return vals[0] if vals else ''
+
+
 def is_paved(surface):
     if isinstance(surface, list):
         surface = ' '.join(str(s) for s in surface)
@@ -84,7 +107,7 @@ def main():
 
     e = ox.graph_to_gdfs(G, nodes=False).reset_index()
     e['miles'] = e['length'] / 1609.34
-    e['hw']    = e['highway'].apply(first)
+    e['hw']    = e['highway'].apply(classify_highway)
     e['nm']    = e['name'].apply(first) if 'name' in e.columns else ''
     surf       = e['surface'] if 'surface' in e.columns else None
 
