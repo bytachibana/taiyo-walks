@@ -7,6 +7,9 @@ on:
     branches: [main]
     paths:
       - 'walks/**'
+      - 'roads.geojson'        # regenerating the network must reprocess
+      - 'process_walks.py'     # so must changing the matching logic
+  workflow_dispatch: {}        # allows a manual "Run workflow" from the UI
 
 # Needed so the workflow can commit progress.json back with GITHUB_TOKEN.
 permissions:
