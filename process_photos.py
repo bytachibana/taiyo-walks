@@ -63,15 +63,20 @@ def usable_coords(lat, lon):
 
 
 def extract_meta(img):
-    """Return (lat, lon, date) from EXIF; any may be None/''."""
+    """Return (lat, lon, date, had_gps_tags) from EXIF; any may be None/''.
+
+    had_gps_tags distinguishes "photo has no location data at all" from
+    "camera wrote a GPS block but left it empty (no satellite fix)".
+    """
     lat = lon = None
     date = ''
+    had_gps = False
     try:
         exif = img.getexif()
     except Exception:
-        return lat, lon, date
+        return lat, lon, date, had_gps
     if not exif:
-        return lat, lon, date
+        return lat, lon, date, had_gps
 
     # Capture date: EXIF sub-IFD DateTimeOriginal (36867), else main DateTime (306)
     try:
@@ -88,12 +93,13 @@ def extract_meta(img):
     except Exception:
         gps = {}
     if gps and 2 in gps and 4 in gps:
+        had_gps = True
         try:
             lat = gps_to_decimal(gps[2], gps.get(1, 'N'))
             lon = gps_to_decimal(gps[4], gps.get(3, 'E'))
         except Exception:
             lat = lon = None
-    return lat, lon, date
+    return lat, lon, date, had_gps
 
 
 def process_one(path):
@@ -101,7 +107,7 @@ def process_one(path):
     stem = os.path.splitext(name)[0]
     out_name = stem + '.jpg'                            # normalise everything to jpg
     with Image.open(path) as im:
-        lat, lon, date = extract_meta(im)
+        lat, lon, date, had_gps_tags = extract_meta(im)
         im = ImageOps.exif_transpose(im).convert('RGB')  # auto-rotate, drop alpha
 
         disp = im.copy(); disp.thumbnail((DISPLAY_MAX, DISPLAY_MAX))
@@ -119,7 +125,14 @@ def process_one(path):
     if usable_coords(lat, lon):          # never write NaN/garbage into the JSON
         entry['lat'] = lat
         entry['lon'] = lon
-    return out_name, entry
+        gps_note = 'gps ok'
+    elif had_gps_tags:
+        # Camera wrote the GPS block but left it empty (refs '\x00', coords NaN)
+        # — location tagging was on but the phone never got a fix.
+        gps_note = 'no-gps (tags present but empty - camera had no GPS fix)'
+    else:
+        gps_note = 'no-gps (photo has no location data)'
+    return out_name, entry, gps_note
 
 
 def main():
@@ -156,10 +169,10 @@ def main():
 
     for path in incoming:
         try:
-            out_name, entry = process_one(path)
+            out_name, entry, gps_note = process_one(path)
             by_name[out_name] = entry
             os.remove(path)                            # remove the raw from the repo
-            loc = f"{entry.get('lat')},{entry.get('lon')}" if 'lat' in entry else 'no-gps'
+            loc = f"{entry['lat']},{entry['lon']}" if 'lat' in entry else gps_note
             print(f"  processed {os.path.basename(path)} -> {out_name}  ({entry['date'] or 'no-date'}, {loc})")
         except Exception as e:
             print(f"  FAILED {os.path.basename(path)}: {e}")
