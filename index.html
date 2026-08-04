@@ -69,7 +69,13 @@ header{
   border:1px solid transparent;margin-bottom:5px;transition:all .15s;
 }
 .witem:hover{background:var(--bg);border-color:var(--border)}
-.witem.active{background:var(--bg);border-color:var(--accent)}
+.witem.active{background:var(--bg);border-color:#ff3b30}
+.show-all{
+  display:none;float:right;cursor:pointer;
+  font-family:var(--mono);font-size:9px;letter-spacing:.06em;
+  color:#ff3b30;text-transform:none;
+}
+.show-all:hover{text-decoration:underline}
 .wname{font-size:12px;font-weight:600}
 .wmeta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px}
 .toggles{display:flex;gap:6px;flex-wrap:wrap}
@@ -254,7 +260,7 @@ header{
       </div>
     </div>
     <div class="sb">
-      <div class="sb-lbl">Walks (<span id="wCount">0</span>)</div>
+      <div class="sb-lbl">Walks (<span id="wCount">0</span>)<span class="show-all" id="showAll" onclick="clearSelection()">show all</span></div>
       <div id="wList"></div>
     </div>
     <div class="sb">
@@ -272,6 +278,7 @@ header{
         <div class="litem"><div class="lline" style="background:#4ade9a"></div>Walked</div>
         <div class="litem"><div class="lline" style="background:#3a3d4a"></div>Not yet walked</div>
         <div class="litem"><div class="lline" style="background:#f0a500"></div>GPS track</div>
+        <div class="litem"><div class="lline" style="background:#ff3b30"></div>Selected walk</div>
       </div>
     </div>
   </aside>
@@ -293,6 +300,13 @@ header{
 <script>
 var map, walkedG, unwalkedG, trackG, photoG;
 var layerState = {walked:true, unwalked:true, tracks:true, photos:true};
+
+// Walk selection: highlight the chosen track in red, dim the other tracks.
+var walkLayers = [];        // [{track, item, walk}] in walk order
+var selectedWalk = null;    // index of the highlighted walk, or null
+var TRACK_NORMAL = {color:'#f0a500', weight:2.5, opacity:0.85};
+var TRACK_DIM    = {color:'#f0a500', weight:1.5, opacity:0.12};
+var TRACK_HILITE = {color:'#ff3b30', weight:5,   opacity:1};   // red = selected
 
 function tog(name) {
   layerState[name] = !layerState[name];
@@ -335,6 +349,34 @@ function openLightbox(p) {
   document.getElementById('lbImg').src = p.file;
   document.getElementById('lbCap').textContent = p.caption || p.date || '';
   document.getElementById('lightbox').style.display = 'flex';
+}
+
+// Highlight one walk (red) and dim the rest. Clicking the active walk again,
+// clicking empty map, or "show all" clears it.
+function selectWalk(idx) {
+  if (selectedWalk === idx) { clearSelection(); return; }   // toggle off
+  selectedWalk = idx;
+  walkLayers.forEach(function(w, i) {
+    var on = (i === idx);
+    w.track.setStyle(on ? TRACK_HILITE : TRACK_DIM);
+    w.item.classList.toggle('active', on);
+  });
+  var sel = walkLayers[idx];
+  sel.track.bringToFront();
+  document.getElementById('showAll').style.display = 'inline';
+  if (isMobile()) toggleDrawer(false);              // reveal the map on phones
+  map.fitBounds(sel.track.getBounds(), {padding:[40,40]});
+  sel.track.openPopup();
+}
+
+function clearSelection() {
+  if (selectedWalk === null) return;
+  selectedWalk = null;
+  walkLayers.forEach(function(w) {
+    w.track.setStyle(TRACK_NORMAL);
+    w.item.classList.remove('active');
+  });
+  document.getElementById('showAll').style.display = 'none';
 }
 
 function renderPhotos(photos) {
@@ -406,24 +448,27 @@ function renderData(data) {
 
   // GPS tracks + walk list
   var wList = document.getElementById('wList');
-  data.walks.forEach(function(walk) {
+  data.walks.forEach(function(walk, idx) {
     var ll = walk.coords.map(function(c){return [c[1],c[0]];});
-    var track = L.polyline(ll, {color:'#f0a500', weight:2.5, opacity:0.85});
+    var track = L.polyline(ll, TRACK_NORMAL);
     track.bindPopup('<div class="pu-name">'+walk.name+'</div><div class="pu-meta">'+walk.date+' &middot; '+walk.miles+' mi</div>');
     trackG.addLayer(track);
 
     var item = document.createElement('div');
     item.className = 'witem';
     item.innerHTML = '<div class="wname">'+walk.name+'</div><div class="wmeta">'+walk.date+' &middot; '+walk.miles+' mi</div>';
-    item.addEventListener('click', function(){
-      document.querySelectorAll('.witem').forEach(function(el){el.classList.remove('active');});
-      item.classList.add('active');
-      if (isMobile()) toggleDrawer(false);   // close drawer so the map is visible
-      map.fitBounds(track.getBounds(), {padding:[40,40]});
-      track.openPopup();
-    });
+
+    item.addEventListener('click', function(){ selectWalk(idx); });
+    // Clicking the track on the map selects it too. Stop propagation so the
+    // map's background-click handler doesn't immediately clear the selection.
+    track.on('click', function(e){ L.DomEvent.stopPropagation(e); selectWalk(idx); });
+
+    walkLayers.push({track:track, item:item, walk:walk});
     wList.appendChild(item);
   });
+
+  // Click empty map (not a track) to clear the highlight.
+  map.on('click', clearSelection);
 
   // Hide loader
   document.getElementById('loader').style.display = 'none';
