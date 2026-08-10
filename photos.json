@@ -1,6 +1,14 @@
 {
  "photos": [
   {
+   "file": "photos/20260809_181452.jpg",
+   "thumb": "photos/thumbs/20260809_181452.jpg",
+   "date": "2026-08-09",
+   "caption": "2026-08-09",
+   "lat": 37.815743,
+   "lon": -121.976878
+  },
+  {
    "file": "photos/20260808_191503.jpg",
    "thumb": "photos/thumbs/20260808_191503.jpg",
    "date": "2026-08-08",
