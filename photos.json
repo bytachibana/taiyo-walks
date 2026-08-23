@@ -1,6 +1,22 @@
 {
  "photos": [
   {
+   "file": "photos/20260822_190356.jpg",
+   "thumb": "photos/thumbs/20260822_190356.jpg",
+   "date": "2026-08-22",
+   "caption": "2026-08-22",
+   "lat": 37.799539,
+   "lon": -121.977814
+  },
+  {
+   "file": "photos/20260822_185924.jpg",
+   "thumb": "photos/thumbs/20260822_185924.jpg",
+   "date": "2026-08-22",
+   "caption": "2026-08-22",
+   "lat": 37.798572,
+   "lon": -121.977216
+  },
+  {
    "file": "photos/20260816_092454.jpg",
    "thumb": "photos/thumbs/20260816_092454.jpg",
    "date": "2026-08-16",
