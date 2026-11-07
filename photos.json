@@ -1,6 +1,18 @@
 {
  "photos": [
   {
+   "file": "photos/20261107_101612.jpg",
+   "thumb": "photos/thumbs/20261107_101612.jpg",
+   "date": "2026-11-07",
+   "caption": "2026-11-07"
+  },
+  {
+   "file": "photos/20261107_100431.jpg",
+   "thumb": "photos/thumbs/20261107_100431.jpg",
+   "date": "2026-11-07",
+   "caption": "2026-11-07"
+  },
+  {
    "file": "photos/20261101_092800.jpg",
    "thumb": "photos/thumbs/20261101_092800.jpg",
    "date": "2026-11-01",
