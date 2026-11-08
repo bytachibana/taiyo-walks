@@ -484,9 +484,10 @@ function renderData(data) {
     unwalkedG.addLayer(line);
   });
 
-  // GPS tracks + walk list
+  // GPS tracks + walk list — newest first in the sidebar (progress.json is
+  // stored chronologically oldest-first). walkLayers stays index-consistent.
   var wList = document.getElementById('wList');
-  data.walks.forEach(function(walk, idx) {
+  data.walks.slice().reverse().forEach(function(walk, idx) {
     var ll = walk.coords.map(function(c){return [c[1],c[0]];});
     var track = L.polyline(ll, TRACK_NORMAL);
     track.bindPopup('<div class="pu-name">'+walk.name+'</div><div class="pu-meta">'+walk.date+' &middot; '+walk.miles+' mi</div>');
