@@ -4,13 +4,17 @@
    "file": "photos/20261107_101612.jpg",
    "thumb": "photos/thumbs/20261107_101612.jpg",
    "date": "2026-11-07",
-   "caption": "2026-11-07"
+   "caption": "2026-11-07",
+   "lat": 37.800335,
+   "lon": -121.964503
   },
   {
    "file": "photos/20261107_100431.jpg",
    "thumb": "photos/thumbs/20261107_100431.jpg",
    "date": "2026-11-07",
-   "caption": "2026-11-07"
+   "caption": "2026-11-07",
+   "lat": 37.801277,
+   "lon": -121.96004
   },
   {
    "file": "photos/20261101_092800.jpg",
@@ -205,12 +209,6 @@
    "lon": -121.942154
   },
   {
-   "file": "photos/20260720_190217.jpg",
-   "thumb": "photos/thumbs/20260720_190217.jpg",
-   "date": "2026-07-20",
-   "caption": "2026-07-20"
-  },
-  {
    "file": "photos/20260720_184637c.jpg",
    "thumb": "photos/thumbs/20260720_184637c.jpg",
    "date": "2026-07-20",
@@ -219,24 +217,12 @@
    "lon": -121.936802
   },
   {
-   "file": "photos/20260720_184637.jpg",
-   "thumb": "photos/thumbs/20260720_184637.jpg",
-   "date": "2026-07-20",
-   "caption": "2026-07-20"
-  },
-  {
    "file": "photos/20260720_184545c.jpg",
    "thumb": "photos/thumbs/20260720_184545c.jpg",
    "date": "2026-07-20",
    "caption": "2026-07-20",
    "lat": 37.804921,
    "lon": -121.936927
-  },
-  {
-   "file": "photos/20260720_184545.jpg",
-   "thumb": "photos/thumbs/20260720_184545.jpg",
-   "date": "2026-07-20",
-   "caption": "2026-07-20"
   },
   {
    "file": "photos/1784213921757.jpg",
