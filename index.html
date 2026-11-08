@@ -154,7 +154,11 @@ header{
   padding:max(24px,env(safe-area-inset-top)) 20px max(24px,env(safe-area-inset-bottom));
 }
 #lbImg{max-width:92vw;max-height:78vh;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.6)}
-#lbCap{font-family:var(--mono);font-size:12px;color:var(--muted)}
+#lbCap{
+  font-family:var(--mono);font-size:12px;color:var(--muted);
+  display:flex;gap:28px;align-items:baseline;justify-content:center;
+}
+#lbCount{opacity:.6}
 .lb-close{
   position:absolute;top:max(12px,env(safe-area-inset-top));right:14px;
   width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
@@ -305,7 +309,7 @@ header{
   <button class="lb-arrow lb-prev" aria-label="Previous photo" onclick="lbNav(-1,event)">&#8249;</button>
   <img id="lbImg" src="" alt="" onclick="event.stopPropagation()">
   <button class="lb-arrow lb-next" aria-label="Next photo" onclick="lbNav(1,event)">&#8250;</button>
-  <div id="lbCap" onclick="event.stopPropagation()"></div>
+  <div id="lbCap" onclick="event.stopPropagation()"><span id="lbDate"></span><span id="lbCount"></span></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -364,10 +368,12 @@ function openLightbox(idx) {
   var p = galleryPhotos[idx];
   if (!p) return;
   lightboxIdx = idx;
-  var img = document.getElementById('lbImg');
-  img.src = p.file;
-  document.getElementById('lbCap').textContent =
-    (p.caption || p.date || '') + '   ' + (idx + 1) + ' / ' + galleryPhotos.length;
+  document.getElementById('lbImg').src = p.file;
+  document.getElementById('lbDate').textContent = p.caption || p.date || '';
+  // Gallery stays newest-first, but number chronologically so the OLDEST
+  // photo reads "1 of N" and the newest reads "N of N".
+  document.getElementById('lbCount').textContent =
+    (galleryPhotos.length - idx) + ' of ' + galleryPhotos.length;
   document.getElementById('lightbox').style.display = 'flex';
 }
 
