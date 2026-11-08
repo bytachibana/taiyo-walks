@@ -93,13 +93,31 @@ def main():
     print(f"Found {len(gpx_paths)} GPX file(s)...")
     walks = []
     buffers = []
+    seen_tracks = {}        # track-signature -> first filename (duplicate guard)
+    duplicates = []
     for path in gpx_paths:
         w = load_gpx(path)
-        if w:
-            buffers.append(w['_line'].buffer(buf_deg))
-            meta = {k: v for k, v in w.items() if k != '_line'}
-            walks.append(meta)
-            print(f"  {w['name']}  {w['date']}  {w['miles']} mi")
+        if not w:
+            continue
+        # Guard against duplicate walks: two files with an identical GPS track
+        # (e.g. the same Runkeeper export pushed twice, or a re-run after the
+        # dedup index was reset) would otherwise double-count distance. Skip the
+        # duplicate and flag it, so the stats self-heal and the Action log shows it.
+        sig = tuple(map(tuple, w['coords']))
+        if sig in seen_tracks:
+            duplicates.append((os.path.basename(path), seen_tracks[sig]))
+            continue
+        seen_tracks[sig] = os.path.basename(path)
+        buffers.append(w['_line'].buffer(buf_deg))
+        meta = {k: v for k, v in w.items() if k != '_line'}
+        walks.append(meta)
+        print(f"  {w['name']}  {w['date']}  {w['miles']} mi")
+
+    if duplicates:
+        print(f"\n  WARNING: skipped {len(duplicates)} DUPLICATE walk file(s) "
+              f"(identical GPS track to an earlier file):")
+        for dup, orig in duplicates:
+            print(f"    {dup}  ==  {orig}")
 
     print(f"\nBuilding walked-area union...")
     walked_area = unary_union(buffers)
@@ -179,6 +197,7 @@ def main():
             'distance_walked': round(distance_mi, 1),
             # how far you walk per mile of *new* road covered
             'repeat_ratio'   : round(distance_mi / walked_mi, 2) if walked_mi > 0 else 0,
+            'duplicate_files': len(duplicates),   # skipped dup tracks (should be 0)
         }
     }
 
